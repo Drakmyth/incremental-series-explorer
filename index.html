@@ -125,14 +125,14 @@
                     <input type="number" id="initialIncrease" value="50" step="10" min="-10000" max="100000">
                 </div>
                 <div class="control-item">
-                    <label for="endTime">End Time (years):</label>
+                    <label for="endTime">Number of Steps:</label>
                     <input type="number" id="endTime" value="10" step="1" min="1" max="100">
                 </div>
             </div>
             <div class="control-group">
                 <div class="control-item">
-                    <label for="yearChange">Year:</label>
-                    <input type="number" id="yearChange" value="1" step="1" min="0" max="100">
+                    <label for="stepChange">Step:</label>
+                    <input type="number" id="stepChange" value="1" step="1" min="0" max="100">
                 </div>
                 <div class="control-item">
                     <label for="increaseChange">Increase Amount:</label>
@@ -144,7 +144,7 @@
         </div>
 
         <div class="rate-info">
-            Current increase: <span id="currentIncreaseDisplay">50</span> per year
+            Current increase: <span id="currentIncreaseDisplay">50</span> per step
         </div>
 
         <div class="chart-container">
@@ -155,13 +155,13 @@
     <script>
         let chart;
 
-        // Store rate changes as objects: { year: number, increase: number }
-        let rateChanges = [{ year: 0, increase: 50 }];
+        // Store rate changes as objects: { step: number, increase: number }
+        let rateChanges = [{ step: 0, increase: 50 }];
 
         // Get DOM elements
         const initialValueInput = document.getElementById('initialValue');
         const initialIncreaseInput = document.getElementById('initialIncrease');
-        const yearChangeInput = document.getElementById('yearChange');
+        const stepChangeInput = document.getElementById('stepChange');
         const increaseChangeInput = document.getElementById('increaseChange');
         const endTimeInput = document.getElementById('endTime');
         const updateChartBtn = document.getElementById('updateChartBtn');
@@ -250,12 +250,12 @@
             for (let i = 0; i < dataPoints.length; i++) {
                 result[i] = currentValue;
 
-                // Find next rate change
+        // Find next rate change
                 const currentIncrease = initialIncreaseInput.value;
                 let increase = parseFloat(currentIncrease) || 0;
 
                 for (const rateChange of rateChanges) {
-                    if (rateChange.year > 0 && rateChange.year <= dataPoints[i]) {
+                    if (rateChange.step > 0 && rateChange.step <= dataPoints[i]) {
                         increase = rateChange.increase;
                     }
                 }
@@ -269,11 +269,10 @@
         }
 
         // Generate data points
-        function generateDataPoints(endYear) {
-            const step = 0.5;
+        function generateDataPoints(endValue) {
             const dataPoints = [];
-            for (let y = 0; y <= endYear; y += step) {
-                dataPoints.push(y);
+            for (let i = 0; i <= endValue; i++) {
+                dataPoints.push(i);
             }
             return dataPoints;
         }
@@ -282,7 +281,7 @@
         function updateCurrentIncrease() {
             let increase = parseFloat(initialIncreaseInput.value) || 0;
             for (const change of rateChanges) {
-                if (change.year >= 0) {
+                if (change.step >= 0) {
                     increase = change.increase;
                 }
             }
@@ -291,8 +290,8 @@
 
         // Main update function
         function updateChart() {
-            const endYear = parseFloat(endTimeInput.value) || 10;
-            const dataPoints = generateDataPoints(endYear);
+            const endValue = parseFloat(endTimeInput.value) || 10;
+            const dataPoints = generateDataPoints(endValue);
 
             const sums = calculateSum(dataPoints);
 
@@ -303,12 +302,12 @@
 
         // Add a new rate change
         function addRateChange() {
-            const year = parseFloat(yearChangeInput.value);
+            const step = parseFloat(stepChangeInput.value);
             const increase = parseFloat(increaseChangeInput.value);
-            if (year > rateChanges[rateChanges.length - 1].year) {
-                rateChanges.push({ year: year, increase: increase });
-                // Sort by year
-                rateChanges.sort((a, b) => a.year - b.year);
+            if (step > rateChanges[rateChanges.length - 1].step) {
+                rateChanges.push({ step: step, increase: increase });
+                // Sort by step
+                rateChanges.sort((a, b) => a.step - b.step);
                 updateChart();
                 updateCurrentIncrease();
             }
@@ -321,7 +320,7 @@
             updateChart();
             updateCurrentIncrease();
         });
-        yearChangeInput.addEventListener('input', (e) => {
+        stepChangeInput.addEventListener('input', (e) => {
             e.preventDefault();
             addRateChange();
         });
