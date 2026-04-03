@@ -99,10 +99,59 @@
             padding: 12px 16px;
             margin-bottom: 15px;
             font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .rate-info:hover {
+            background: rgba(99,179,237,0.3);
+        }
+        .rate-info.expanded {
+            padding: 16px;
+            background: rgba(99,179,237,0.25);
         }
         .rate-info span {
             font-weight: 600;
             color: #63b3ed;
+        }
+        .rate-changes-list {
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .rate-change-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            margin: 4px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        .rate-change-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-small {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            font-size: 14px;
+            cursor: pointer;
+            color: #a0aec0;
+            transition: all 0.2s ease;
+        }
+        .btn-small:hover {
+            background: rgba(99,179,237,0.6);
+            border-color: #63b3ed;
+            color: #fff;
+        }
+        .btn-small.delete:hover {
+            background: rgba(248,113,113,0.6);
+            border-color: #f56565;
+            color: #fff;
         }
         .add-rate-btn {
             background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
@@ -143,8 +192,11 @@
             <button id="updateChartBtn">Update Chart</button>
         </div>
 
-        <div class="rate-info">
+        <div class="rate-info" id="rateInfoBox">
             Current increase: <span id="currentIncreaseDisplay">50</span> per step
+            <div class="rate-changes-list" id="rateChangesList" style="display: none;">
+                <div id="rateChangesListInner"></div>
+            </div>
         </div>
 
         <div class="chart-container">
@@ -154,9 +206,8 @@
 
     <script>
         let chart;
-
-        // Store rate changes as objects: { step: number, increase: number }
         let rateChanges = [{ step: 0, increase: 50 }];
+        let currentStep = 0; // Track next available step number for new rate changes
 
         // Get DOM elements
         const initialValueInput = document.getElementById('initialValue');
@@ -167,6 +218,9 @@
         const updateChartBtn = document.getElementById('updateChartBtn');
         const addIncreaseBtn = document.getElementById('addIncreaseBtn');
         const currentIncreaseDisplay = document.getElementById('currentIncreaseDisplay');
+        const rateInfoBox = document.getElementById('rateInfoBox');
+        const rateChangesList = document.getElementById('rateChangesList');
+        const rateChangesListInner = document.getElementById('rateChangesListInner');
 
         // Initialize chart
         function initChart() {
@@ -277,7 +331,7 @@
             return dataPoints;
         }
 
-        // Update current increase display
+        // Update current increase display and render rate changes list
         function updateCurrentIncrease() {
             let increase = parseFloat(initialIncreaseInput.value) || 0;
             for (const change of rateChanges) {
@@ -286,6 +340,59 @@
                 }
             }
             currentIncreaseDisplay.textContent = increase;
+            renderRateChangesList();
+        }
+
+        // Render the list of rate changes
+        function renderRateChangesList() {
+            if (rateChanges.length === 0) {
+                rateChangesListInner.innerHTML = '';
+                return;
+            }
+
+            const html = rateChanges.map((change, index) => {
+                return `
+                    <div class="rate-change-item">
+                        <div class="rate-change-info">
+                            <span>${change.step === 0 ? 'Initial' : 'Step ' + change.step}</span>
+                            <input type="number" class="rate-change-input"
+                                   data-index="${index}"
+                                   value="${change.increase}"
+                                   step="10" min="-10000" max="100000"
+                                   style="width: 90px;">
+                        </div>
+                        ${change.step === 0 ? '' : `
+                            <button class="btn-small delete" data-index="${index}" title="Delete">
+                                &times;
+                            </button>
+                        `}
+                    </div>
+                `;
+            }).join('');
+
+            rateChangesListInner.innerHTML = html;
+
+            // Wire up event listeners for edit inputs
+            const editInputs = rateChangesListInner.querySelectorAll('.rate-change-input');
+            editInputs.forEach(function(input) {
+                input.addEventListener('input', function(e) {
+                    const index = parseInt(e.target.dataset.index);
+                    const value = parseFloat(e.target.value) || 0;
+                    rateChanges[index].increase = value;
+                    updateChart();
+                });
+            });
+
+            // Wire up event listeners for delete buttons
+            const deleteButtons = rateChangesListInner.querySelectorAll('.delete');
+            deleteButtons.forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    const index = parseInt(e.target.dataset.index);
+                    rateChanges.splice(index, 1);
+                    updateChart();
+                    renderRateChangesList();
+                });
+            });
         }
 
         // Main update function
@@ -298,6 +405,9 @@
             chart.data.labels = dataPoints;
             chart.data.datasets[0].data = sums;
             chart.update();
+
+            // Also render the rate changes list after chart update
+            renderRateChangesList();
         }
 
         // Add a new rate change
@@ -331,6 +441,43 @@
         endTimeInput.addEventListener('input', updateChart);
         updateChartBtn.addEventListener('click', updateChart);
         addIncreaseBtn.addEventListener('click', addRateChange);
+
+        // Add expand/collapse listener for the rate info box
+        rateInfoBox.addEventListener('click', (e) => {
+            // Don't toggle if clicking a button or input inside
+            if (e.target.closest('.delete') || e.target.closest('input')) {
+                return;
+            }
+            const isExpanded = rateInfoBox.classList.contains('expanded');
+            if (isExpanded) {
+                rateInfoBox.classList.remove('expanded');
+                rateChangesList.style.display = 'none';
+            } else {
+                rateInfoBox.classList.add('expanded');
+                rateChangesList.style.display = 'block';
+            }
+        });
+
+        // Toggle expand/collapse of rate changes list
+        function toggleRateList() {
+            const isExpanded = rateInfoBox.classList.contains('expanded');
+            if (isExpanded) {
+                rateInfoBox.classList.remove('expanded');
+                rateChangesList.style.display = 'none';
+            } else {
+                rateInfoBox.classList.add('expanded');
+                rateChangesList.style.display = 'block';
+            }
+        }
+
+        // Add expand/collapse listener for the rate info box
+        rateInfoBox.addEventListener('click', function(e) {
+            // Don't toggle if clicking a button or input inside
+            if (e.target.closest('.delete') || e.target.tagName === 'INPUT' || e.target.tagName === 'SPAN') {
+                return;
+            }
+            toggleRateList();
+        });
 
         // Initialize
         initChart();
