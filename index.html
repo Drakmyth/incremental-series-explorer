@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Growing Sum Visualizer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+        .controls {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .control-item label {
+            font-size: 14px;
+            color: #a0aec0;
+        }
+        input[type="number"] {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #fff;
+            font-size: 14px;
+            width: 120px;
+        }
+        input[type="number"]::placeholder {
+            color: #718096;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #63b3ed;
+            background: rgba(99,179,237,0.2);
+        }
+        button {
+            background: linear-gradient(135deg, #63b3ed 0%, #4299e1 100%);
+            border: none;
+            border-radius: 6px;
+            padding: 10px 20px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99,179,237,0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .chart-container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            position: relative;
+            height: 500px;
+        }
+        #myChart {
+            max-height: 100%;
+        }
+        .rate-info {
+            background: rgba(99,179,237,0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .rate-info span {
+            font-weight: 600;
+            color: #63b3ed;
+        }
+        .add-rate-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📈 Growing Sum Visualizer</h1>
+
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-item">
+                    <label for="initialValue">Starting Value:</label>
+                    <input type="number" id="initialValue" value="1000" step="10" min="0">
+                </div>
+                <div class="control-item">
+                    <label for="initialRate">Initial Rate (% per year):</label>
+                    <input type="number" id="initialRate" value="5" step="0.5" min="-100" max="500">
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="control-item">
+                    <label for="endTime">End Time (years):</label>
+                    <input type="number" id="endTime" value="10" step="1" min="1" max="100">
+                </div>
+            </div>
+            <button id="updateChartBtn">Update Chart</button>
+            <button id="addRateBtn" class="add-rate-btn">+ Add Rate Change</button>
+        </div>
+
+        <div class="rate-info">
+            Current rate: <span id="currentRateDisplay">5%</span> per year
+        </div>
+
+        <div class="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+
+        // Store rate changes as objects: { year: number, rate: number }
+        let rateChanges = [{ year: 0, rate: 5 }];
+
+        // Get DOM elements
+        const initialValueInput = document.getElementById('initialValue');
+        const initialRateInput = document.getElementById('initialRate');
+        const endTimeInput = document.getElementById('endTime');
+        const updateChartBtn = document.getElementById('updateChartBtn');
+        const addRateBtn = document.getElementById('addRateBtn');
+        const currentRateDisplay = document.getElementById('currentRateDisplay');
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('myChart').getContext('2d');
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Growing Sum',
+                        data: [],
+                        borderColor: '#63b3ed',
+                        backgroundColor: 'rgba(99, 179, 237, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#63b3ed',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#a0aec0'
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e0',
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#a0aec0',
+                                maxTicksLimit: 8
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#a0aec0'
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Calculate the growing sum
+        function calculateSum(dataPoints) {
+            const result = new Array(dataPoints.length).fill(0);
+            let currentValue = parseFloat(initialValueInput.value) || 0;
+
+            for (let i = 0; i < dataPoints.length; i++) {
+                result[i] = currentValue;
+
+                // Get current rate
+                let rate = parseFloat(initialRateInput.value) || 0;
+
+                // Find next rate change
+                for (const rateChange of rateChanges) {
+                    if (rateChange.year > 0 && rateChange.year <= dataPoints[i]) {
+                        rate = rateChange.rate;
+                    }
+                }
+
+                // Calculate next value
+                currentValue = currentValue * (1 + rate / 100);
+            }
+
+            return result;
+        }
+
+        // Generate data points
+        function generateDataPoints(endYear) {
+            const step = 0.5;
+            const dataPoints = [];
+            for (let y = 0; y <= endYear; y += step) {
+                dataPoints.push(y);
+            }
+            return dataPoints;
+        }
+
+        // Update current rate display
+        function updateCurrentRate() {
+            let rate = parseFloat(initialRateInput.value) || 0;
+            for (const change of rateChanges) {
+                if (change.year >= 0) {
+                    rate = change.rate;
+                }
+            }
+            currentRateDisplay.textContent = rate + '%';
+        }
+
+        // Main update function
+        function updateChart() {
+            const endYear = parseFloat(endTimeInput.value) || 10;
+            const dataPoints = generateDataPoints(endYear);
+
+            const sums = calculateSum(dataPoints);
+
+            chart.data.labels = dataPoints;
+            chart.data.datasets[0].data = sums;
+            chart.update();
+        }
+
+        // Add a new rate change
+        function addRateChange() {
+            const year = prompt('Enter year for rate change:', (rateChanges.length > 0) ? rateChanges[rateChanges.length - 1].year + 1 : 1);
+            if (year !== null && year !== '') {
+                const newRate = prompt('Enter new rate (%):', (rateChanges.length > 0) ? initialRateInput.value : '5');
+                if (newRate !== null && newRate !== '') {
+                    rateChanges.push({ year: parseFloat(year), rate: parseFloat(newRate) });
+                    // Sort by year
+                    rateChanges.sort((a, b) => a.year - b.year);
+                    updateChart();
+                    updateCurrentRate();
+                }
+            }
+        }
+
+        // Event listeners
+        initialValueInput.addEventListener('input', updateChart);
+        initialRateInput.addEventListener('input', (e) => {
+            e.preventDefault();
+            updateChart();
+            updateCurrentRate();
+        });
+        endTimeInput.addEventListener('input', updateChart);
+        updateChartBtn.addEventListener('click', updateChart);
+        addRateBtn.addEventListener('click', addRateChange);
+
+        // Initialize
+        initChart();
+        updateChart();
+        updateCurrentRate();
+    </script>
+</body>
+</html>
