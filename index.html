@@ -109,13 +109,17 @@
             padding: 16px;
             background: rgba(99,179,237,0.25);
         }
+        .rate-changes-list {
+            display: none;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+        .rate-info.expanded .rate-changes-list {
+            display: block;
+        }
         .rate-info span {
             font-weight: 600;
             color: #63b3ed;
-        }
-        .rate-changes-list {
-            margin-top: 10px;
-            font-size: 13px;
         }
         .rate-change-item {
             display: flex;
@@ -196,7 +200,7 @@
 
         <div class="rate-info" id="rateInfoBox">
             Current increase: <span id="currentIncreaseDisplay">50</span> per step
-            <div class="rate-changes-list" id="rateChangesList" style="display: none;">
+            <div class="rate-changes-list" id="rateChangesList">
                 <div id="rateChangesListInner"></div>
             </div>
         </div>
@@ -436,38 +440,16 @@
         updateChartBtn.addEventListener('click', updateChart);
         addIncreaseBtn.addEventListener('click', addRateChange);
 
-        // Add expand/collapse listener for the rate info box
-        rateInfoBox.addEventListener('click', (e) => {
-            // Don't toggle if clicking a button or input inside
-            if (e.target.closest('.delete') || e.target.closest('input')) {
-                return;
-            }
-            const isExpanded = rateInfoBox.classList.contains('expanded');
-            if (isExpanded) {
-                rateInfoBox.classList.remove('expanded');
-                rateChangesList.style.display = 'none';
-            } else {
-                rateInfoBox.classList.add('expanded');
-                rateChangesList.style.display = 'block';
-            }
-        });
-
         // Toggle expand/collapse of rate changes list
         function toggleRateList() {
-            const isExpanded = rateInfoBox.classList.contains('expanded');
-            if (isExpanded) {
-                rateInfoBox.classList.remove('expanded');
-                rateChangesList.style.display = 'none';
-            } else {
-                rateInfoBox.classList.add('expanded');
-                rateChangesList.style.display = 'block';
-            }
+            rateInfoBox.classList.toggle('expanded');
         }
 
         // Add expand/collapse listener for the rate info box
         rateInfoBox.addEventListener('click', function(e) {
-            // Don't toggle if clicking a button or input inside
-            if (e.target.closest('.delete') || e.target.tagName === 'INPUT' || e.target.tagName === 'SPAN') {
+            // Don't toggle if clicking on interactive elements
+            const target = e.target;
+            if (target.tagName === 'BUTTON' || target.tagName === 'INPUT') {
                 return;
             }
             toggleRateList();
