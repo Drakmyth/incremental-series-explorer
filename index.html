@@ -121,22 +121,30 @@
                     <input type="number" id="initialValue" value="1000" step="10" min="0">
                 </div>
                 <div class="control-item">
-                    <label for="initialRate">Initial Rate (% per year):</label>
-                    <input type="number" id="initialRate" value="5" step="0.5" min="-100" max="500">
+                    <label for="initialIncrease">Initial Increase:</label>
+                    <input type="number" id="initialIncrease" value="50" step="10" min="-10000" max="100000">
                 </div>
-            </div>
-            <div class="control-group">
                 <div class="control-item">
                     <label for="endTime">End Time (years):</label>
                     <input type="number" id="endTime" value="10" step="1" min="1" max="100">
                 </div>
             </div>
+            <div class="control-group">
+                <div class="control-item">
+                    <label for="yearChange">Year:</label>
+                    <input type="number" id="yearChange" value="1" step="1" min="0" max="100">
+                </div>
+                <div class="control-item">
+                    <label for="increaseChange">Increase Amount:</label>
+                    <input type="number" id="increaseChange" value="100" step="10" min="-10000" max="100000">
+                </div>
+                <button id="addIncreaseBtn">+ Add Change</button>
+            </div>
             <button id="updateChartBtn">Update Chart</button>
-            <button id="addRateBtn" class="add-rate-btn">+ Add Rate Change</button>
         </div>
 
         <div class="rate-info">
-            Current rate: <span id="currentRateDisplay">5%</span> per year
+            Current increase: <span id="currentIncreaseDisplay">50</span> per year
         </div>
 
         <div class="chart-container">
@@ -147,16 +155,18 @@
     <script>
         let chart;
 
-        // Store rate changes as objects: { year: number, rate: number }
-        let rateChanges = [{ year: 0, rate: 5 }];
+        // Store rate changes as objects: { year: number, increase: number }
+        let rateChanges = [{ year: 0, increase: 50 }];
 
         // Get DOM elements
         const initialValueInput = document.getElementById('initialValue');
-        const initialRateInput = document.getElementById('initialRate');
+        const initialIncreaseInput = document.getElementById('initialIncrease');
+        const yearChangeInput = document.getElementById('yearChange');
+        const increaseChangeInput = document.getElementById('increaseChange');
         const endTimeInput = document.getElementById('endTime');
         const updateChartBtn = document.getElementById('updateChartBtn');
-        const addRateBtn = document.getElementById('addRateBtn');
-        const currentRateDisplay = document.getElementById('currentRateDisplay');
+        const addIncreaseBtn = document.getElementById('addIncreaseBtn');
+        const currentIncreaseDisplay = document.getElementById('currentIncreaseDisplay');
 
         // Initialize chart
         function initChart() {
@@ -235,22 +245,24 @@
         function calculateSum(dataPoints) {
             const result = new Array(dataPoints.length).fill(0);
             let currentValue = parseFloat(initialValueInput.value) || 0;
+            let lastValue = currentValue;
 
             for (let i = 0; i < dataPoints.length; i++) {
                 result[i] = currentValue;
 
-                // Get current rate
-                let rate = parseFloat(initialRateInput.value) || 0;
-
                 // Find next rate change
+                const currentIncrease = initialIncreaseInput.value;
+                let increase = parseFloat(currentIncrease) || 0;
+
                 for (const rateChange of rateChanges) {
                     if (rateChange.year > 0 && rateChange.year <= dataPoints[i]) {
-                        rate = rateChange.rate;
+                        increase = rateChange.increase;
                     }
                 }
 
-                // Calculate next value
-                currentValue = currentValue * (1 + rate / 100);
+                // Calculate next value by adding the increase
+                currentValue = lastValue + increase;
+                lastValue = currentValue;
             }
 
             return result;
@@ -266,15 +278,15 @@
             return dataPoints;
         }
 
-        // Update current rate display
-        function updateCurrentRate() {
-            let rate = parseFloat(initialRateInput.value) || 0;
+        // Update current increase display
+        function updateCurrentIncrease() {
+            let increase = parseFloat(initialIncreaseInput.value) || 0;
             for (const change of rateChanges) {
                 if (change.year >= 0) {
-                    rate = change.rate;
+                    increase = change.increase;
                 }
             }
-            currentRateDisplay.textContent = rate + '%';
+            currentIncreaseDisplay.textContent = increase;
         }
 
         // Main update function
@@ -291,34 +303,40 @@
 
         // Add a new rate change
         function addRateChange() {
-            const year = prompt('Enter year for rate change:', (rateChanges.length > 0) ? rateChanges[rateChanges.length - 1].year + 1 : 1);
-            if (year !== null && year !== '') {
-                const newRate = prompt('Enter new rate (%):', (rateChanges.length > 0) ? initialRateInput.value : '5');
-                if (newRate !== null && newRate !== '') {
-                    rateChanges.push({ year: parseFloat(year), rate: parseFloat(newRate) });
-                    // Sort by year
-                    rateChanges.sort((a, b) => a.year - b.year);
-                    updateChart();
-                    updateCurrentRate();
-                }
+            const year = parseFloat(yearChangeInput.value);
+            const increase = parseFloat(increaseChangeInput.value);
+            if (year > rateChanges[rateChanges.length - 1].year) {
+                rateChanges.push({ year: year, increase: increase });
+                // Sort by year
+                rateChanges.sort((a, b) => a.year - b.year);
+                updateChart();
+                updateCurrentIncrease();
             }
         }
 
         // Event listeners
         initialValueInput.addEventListener('input', updateChart);
-        initialRateInput.addEventListener('input', (e) => {
+        initialIncreaseInput.addEventListener('input', (e) => {
             e.preventDefault();
             updateChart();
-            updateCurrentRate();
+            updateCurrentIncrease();
+        });
+        yearChangeInput.addEventListener('input', (e) => {
+            e.preventDefault();
+            addRateChange();
+        });
+        increaseChangeInput.addEventListener('input', (e) => {
+            e.preventDefault();
+            addRateChange();
         });
         endTimeInput.addEventListener('input', updateChart);
         updateChartBtn.addEventListener('click', updateChart);
-        addRateBtn.addEventListener('click', addRateChange);
+        addIncreaseBtn.addEventListener('click', addRateChange);
 
         // Initialize
         initChart();
         updateChart();
-        updateCurrentRate();
+        updateCurrentIncrease();
     </script>
 </body>
 </html>
