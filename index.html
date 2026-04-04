@@ -213,7 +213,6 @@
     <script>
         let chart;
         let rateChanges = [{ step: 0, increase: 50 }];
-        let currentStep = 0; // Track next available step number for new rate changes
 
         // Get DOM elements
         const initialValueInput = document.getElementById('initialValue');
@@ -420,13 +419,11 @@
         function addRateChange() {
             const step = parseFloat(stepChangeInput.value);
             const increase = parseFloat(increaseChangeInput.value);
-            if (step > rateChanges[rateChanges.length - 1].step) {
-                rateChanges.push({ step: step, increase: increase });
-                // Sort by step
-                rateChanges.sort((a, b) => a.step - b.step);
-                updateChart();
-                updateCurrentIncrease();
-            }
+            rateChanges.push({ step: step, increase: increase });
+            // Sort by step
+            rateChanges.sort((a, b) => a.step - b.step);
+            updateChart();
+            updateCurrentIncrease();
         }
 
         // Event listeners
